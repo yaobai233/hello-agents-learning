@@ -1,59 +1,67 @@
-import requests
-import time
+﻿"""使用 .env 中的配置验证免费模型，找到可用模型后停止。"""
 
-# ========= 这里改你的信息 =========
-API_KEY = "sk-uLrFEVqtJwqia1XD987f2346Cc9948Cb86Bd8f2"  # 填入你的 aihubmix api key
-BASE_URL = "https://aihubmix.com/v1/chat/completions"
+from pathlib import Path
 
-# 候选免费模型列表，可以自行增删
-model_list = [
-    "deepseek-v3-free",
-    "qwen2.5-7b-free",
-    "glm-4-flash-free",
-    "llama3.1-8b-free"
-]
-# ==================================
+from dotenv import load_dotenv
+from openai import APIConnectionError, APIStatusError
 
-headers = {
-    "Authorization": f"Bearer {API_KEY}",
-    "Content-Type": "application/json"
-}
+from llm_client import HelloAgentsLLM
 
-test_msg = {
-    "model": "",
-    "messages": [{"role": "user", "content": "你好，简单回答我一句话"}],
-    "temperature": 0.3
-}
 
-def test_model(model_name):
-    test_msg["model"] = model_name
-    try:
-        resp = requests.post(BASE_URL, headers=headers, json=test_msg, timeout=30)
-        res_json = resp.json()
-        if resp.status_code == 200:
-            ans = res_json["choices"][0]["message"]["content"]
-            print(f"✅【可用】{model_name}，返回内容：{ans}")
-            return True, model_name
-        else:
-            err_msg = res_json.get("error", {}).get("message", "未知错误")
-            print(f"❌【不可用】{model_name} | status:{resp.status_code} | {err_msg}")
-            return False, model_name
-    except Exception as e:
-        print(f"⚠️【异常】{model_name} | {str(e)}")
-        return False, model_name
+# 名称来自 AIHubMix 官方免费模型列表；实际可用性以请求结果为准。
+MODEL_CANDIDATES = (
+    "glm-4.7-flash-free",
+    "coding-glm-4.6-free",
+    "mimo-v2-flash-free",
+)
+
+
+def find_available_model():
+    load_dotenv(Path(__file__).with_name(".env"))
+    for model in MODEL_CANDIDATES:
+        llm = HelloAgentsLLM(model=model, timeout=30)
+        # 诊断时关闭重试，避免重复消耗调用额度。
+        client = llm.client.with_options(max_retries=0)
+        print(f"测试免费模型：{model}", flush=True)
+        try:
+            content = []
+            with client.chat.completions.create(
+                model=model,
+                messages=[{"role": "user", "content": "Reply with exactly OK."}],
+                temperature=0,
+                max_tokens=128,
+                stream=True,
+            ) as response:
+                for chunk in response:
+                    if chunk.choices:
+                        content.append(chunk.choices[0].delta.content or "")
+            answer = "".join(content).strip()
+            if "accounts that have not been recharged can only try 10 times" in answer.lower():
+                print("账号的 10 次免费试用额度已用完，切换免费模型也无法解决。")
+                print("可在 AIHubMix 控制台充值以开通免费模型每日额度，或配置其他可用服务。")
+                return None
+            if answer.upper().rstrip(".!。！") == "OK":
+                print(f"可用模型：{model}")
+                return model
+            print(f"未返回预期的 OK，模型回复：{answer[:300]!r}")
+        except APIStatusError as error:
+            print(f"调用失败：HTTP {error.status_code}，错误码 {error.code}")
+            if error.status_code in (401, 403, 429):
+                print("请先检查 API Key、账号权限或调用额度。")
+                return None
+        except APIConnectionError:
+            print("连接失败，请检查网络和 LLM_BASE_URL。")
+            return None
+        finally:
+            client.close()
+            llm.client.close()
+    return None
 
 
 if __name__ == "__main__":
-    print("开始逐个测试免费模型...\n")
-    available_model = None
-    for m in model_list:
-        ok, name = test_model(m)
-        if ok:
-            available_model = name
-            break
-        time.sleep(1.2)  # 间隔，防止429限流
-    if available_model:
-        print(f"\n🎉 找到可用模型：{available_model}")
-        print("你可以把这个模型名字复制，放到你原来LLM调用代码的model变量中使用")
+    model = find_available_model()
+    if model:
+        print(f"可在 .env 中设置 LLM_MODEL_ID={model}")
     else:
-        print("\n❌ 当前所有测试模型都不可用，稍后再试")
+        print("未找到已验证可用的免费模型。")
+        raise SystemExit(1)

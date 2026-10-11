@@ -1,20 +1,20 @@
-# -*- coding: gbk -*-
+ï»¿# -*- coding: utf-8 -*-
 import os
 from openai import OpenAI
 from dotenv import load_dotenv
 from typing import List, Dict
 
-# ¼ÓÔØ .env ÎÄ¼şÖĞµÄ»·¾³±äÁ¿
+# åŠ è½½ .env æ–‡ä»¶ä¸­çš„ç¯å¢ƒå˜é‡
 load_dotenv()
 
 class HelloAgentsLLM:
     """
-    Îª±¾Êé "Hello Agents" ¶¨ÖÆµÄLLM¿Í»§¶Ë¡£
-    ËüÓÃÓÚµ÷ÓÃÈÎºÎ¼æÈİOpenAI½Ó¿ÚµÄ·şÎñ£¬²¢Ä¬ÈÏÊ¹ÓÃÁ÷Ê½ÏìÓ¦¡£
+    ä¸ºæœ¬ä¹¦ "Hello Agents" å®šåˆ¶çš„LLMå®¢æˆ·ç«¯ã€‚
+    å®ƒç”¨äºè°ƒç”¨ä»»ä½•å…¼å®¹OpenAIæ¥å£çš„æœåŠ¡ï¼Œå¹¶é»˜è®¤ä½¿ç”¨æµå¼å“åº”ã€‚
     """
     def __init__(self, model: str = None, apiKey: str = None, baseUrl: str = None, timeout: int = None):
         """
-        ³õÊ¼»¯¿Í»§¶Ë¡£ÓÅÏÈÊ¹ÓÃ´«Èë²ÎÊı£¬Èç¹ûÎ´Ìá¹©£¬Ôò´Ó»·¾³±äÁ¿¼ÓÔØ¡£
+        åˆå§‹åŒ–å®¢æˆ·ç«¯ã€‚ä¼˜å…ˆä½¿ç”¨ä¼ å…¥å‚æ•°ï¼Œå¦‚æœæœªæä¾›ï¼Œåˆ™ä»ç¯å¢ƒå˜é‡åŠ è½½ã€‚
         """
         self.model = model or os.getenv("LLM_MODEL_ID")
         apiKey = apiKey or os.getenv("LLM_API_KEY")
@@ -22,15 +22,15 @@ class HelloAgentsLLM:
         timeout = timeout or int(os.getenv("LLM_TIMEOUT", 60))
         
         if not all([self.model, apiKey, baseUrl]):
-            raise ValueError("Ä£ĞÍID¡¢APIÃÜÔ¿ºÍ·şÎñµØÖ·±ØĞë±»Ìá¹©»òÔÚ.envÎÄ¼şÖĞ¶¨Òå¡£")
+            raise ValueError("æ¨¡å‹IDã€APIå¯†é’¥å’ŒæœåŠ¡åœ°å€å¿…é¡»è¢«æä¾›æˆ–åœ¨.envæ–‡ä»¶ä¸­å®šä¹‰ã€‚")
 
         self.client = OpenAI(api_key=apiKey, base_url=baseUrl, timeout=timeout)
 
     def think(self, messages: List[Dict[str, str]], temperature: float = 0) -> str:
         """
-        µ÷ÓÃ´óÓïÑÔÄ£ĞÍ½øĞĞË¼¿¼£¬²¢·µ»ØÆäÏìÓ¦¡£
+        è°ƒç”¨å¤§è¯­è¨€æ¨¡å‹è¿›è¡Œæ€è€ƒï¼Œå¹¶è¿”å›å…¶å“åº”ã€‚
         """
-        print(f"? ÕıÔÚµ÷ÓÃ {self.model} Ä£ĞÍ...")
+        print(f"æ­£åœ¨è°ƒç”¨ {self.model} æ¨¡å‹...")
         try:
             response = self.client.chat.completions.create(
                 model=self.model,
@@ -39,8 +39,8 @@ class HelloAgentsLLM:
                 stream=True,
             )
             
-            # ´¦ÀíÁ÷Ê½ÏìÓ¦
-            print("? ´óÓïÑÔÄ£ĞÍÏìÓ¦³É¹¦:")
+            # å¤„ç†æµå¼å“åº”
+            print("å¤§è¯­è¨€æ¨¡å‹å“åº”æˆåŠŸ:")
             collected_content = []
             for chunk in response:
                 if not chunk.choices:
@@ -48,27 +48,27 @@ class HelloAgentsLLM:
                 content = chunk.choices[0].delta.content or ""
                 print(content, end="", flush=True)
                 collected_content.append(content)
-            print()  # ÔÚÁ÷Ê½Êä³ö½áÊøºó»»ĞĞ
+            print()  # åœ¨æµå¼è¾“å‡ºç»“æŸåæ¢è¡Œ
             return "".join(collected_content)
 
         except Exception as e:
-            print(f"? µ÷ÓÃLLM APIÊ±·¢Éú´íÎó: {e}")
+            print(f"è°ƒç”¨LLM APIæ—¶å‘ç”Ÿé”™è¯¯: {e}")
             return None
 
-# --- ¿Í»§¶ËÊ¹ÓÃÊ¾Àı ---
+# --- å®¢æˆ·ç«¯ä½¿ç”¨ç¤ºä¾‹ ---
 if __name__ == '__main__':
     try:
         llmClient = HelloAgentsLLM()
         
         exampleMessages = [
             {"role": "system", "content": "You are a helpful assistant that writes Python code."},
-            {"role": "user", "content": "Ğ´Ò»¸ö¿ìËÙÅÅĞòËã·¨"}
+            {"role": "user", "content": "å†™ä¸€ä¸ªå¿«é€Ÿæ’åºç®—æ³•"}
         ]
         
-        print("--- µ÷ÓÃLLM ---")
+        print("--- è°ƒç”¨LLM ---")
         responseText = llmClient.think(exampleMessages)
         if responseText:
-            print("\n\n--- ÍêÕûÄ£ĞÍÏìÓ¦ ---")
+            print("\n\n--- å®Œæ•´æ¨¡å‹å“åº” ---")
             print(responseText)
 
     except ValueError as e:
